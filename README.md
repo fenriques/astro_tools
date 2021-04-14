@@ -2,12 +2,13 @@
 A collection of  tools for astronomy software
 
 # 1) fits_manager.py
-    This terminal based script allows operation (move or delete) on fits files based on meta-information stored 
-    in fits keyword.
+    This terminal based script allows operation (move or delete) on fits files
+     based on meta-information stored in fits keyword.
     Any custom condition can be set by the user on all fits keyword.
     For example:
     - ECC > 0.6 will move/delete files with Eccentricity too high
-    - GAIN == 200 and FILTER == 'H_Alpha'  will move files having these Gain and Filter to another dir
+    - GAIN == 200 and FILTER == 'H_Alpha'  will move files having these Gain 
+    and Filter to another dir
 
 # Operation:
     - Download fits_manager.py
