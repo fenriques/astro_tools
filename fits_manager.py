@@ -23,7 +23,7 @@ except:
 config = configparser.ConfigParser()
 try:
     with open('config.ini') as f:
-        config.read_file('config.ini')
+        config.read('config.ini')
 
 except IOError:
     config.add_section('default')
