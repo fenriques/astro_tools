@@ -22,8 +22,10 @@ except:
 # Read / create config file
 config = configparser.ConfigParser()
 try:
-    config.read('config.ini')
-except:
+    with open('test.ini') as f:
+        config.read_file('config.ini')
+
+except IOError:
     config.add_section('default')
     config['default']['sourceDirName'] = "."
     config['default']['destinationDirName'] = "."

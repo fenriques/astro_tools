@@ -2,7 +2,7 @@
 A collection of  tools for astronomy software
 
 1) fits_manager.py
-    This script allows operation (move or delete) on fits files based on meta-information stored 
+    This terminal based script allows operation (move or delete) on fits files based on meta-information stored 
     in fits keyword.
     Any custom condition can be set by the user on all fits keyword.
     For example:
