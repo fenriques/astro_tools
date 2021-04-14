@@ -22,7 +22,7 @@ except:
 # Read / create config file
 config = configparser.ConfigParser()
 try:
-    with open('test.ini') as f:
+    with open('config.ini') as f:
         config.read_file('config.ini')
 
 except IOError:
