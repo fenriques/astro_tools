@@ -1,7 +1,7 @@
 # astro_tools
 A collection of  tools for astronomy software
 
-#1) fits_manager.py
+# 1) fits_manager.py
     This terminal based script allows operation (move or delete) on fits files based on meta-information stored 
     in fits keyword.
     Any custom condition can be set by the user on all fits keyword.
@@ -9,7 +9,7 @@ A collection of  tools for astronomy software
     - ECC > 0.6 will move/delete files with Eccentricity too high
     - GAIN == 200 and FILTER == 'H_Alpha'  will move files having these Gain and Filter to another dir
 
-    #Operation:
+# Operation:
     - Download fits_manager.py
     - Execute from terminal: python fits_manager.py
     - Set a source directory containing fits file
@@ -17,27 +17,27 @@ A collection of  tools for astronomy software
     - Write a condition matching your criteria
     - Move / Delete single or multiple files
 
-    #Requirements:
+# Requirements:
     - Tested on Linux only, should work on Win/Mac too.
     - Python3, astropy
 
 ![image 1](/documentation/fits_manager1.png?raw=true)
 
-#2) fits_header_import.py
+# 2) fits_header_import.py
 
     This script reads parameters from Ekos Analyze log file (.analyze)
     and writes them as keywords into fits files header section.
 
     As of now can be imported: HFR, Eccentricity, Stars, Median (background)
     
-    #Operation:
+# Operation:
     After an imaging session and before moving any fits file,
     launch the script specifying the .analyze file path:
         python fits_header_import.py 
     or with arg:
         python fits_header_import.py <full_path_to_analyze_session_file>.analyze
     
-    #Notes:
+# Notes:
     - Tested on Linux only.
     - This script needs inline configuration 
     - .analyze default location: ~/.local/share/kstars/analyze/
