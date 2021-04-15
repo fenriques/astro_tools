@@ -3,11 +3,11 @@
     and writes them as keywords into fits files header section.
 
     As of now can be imported: HFR, Eccentricity, Stars, Median (background)
-    
+
 # Operation:
     After an imaging session and before moving any fits file,
-    launch the script: 
-        - python fits_header_import.py 
+    launch the script:
+        - python fits_header_import.py
         - Enter the .analyze file location
 
 # Configuration:
@@ -15,21 +15,20 @@
     - fitsFileIndex is the position (comma separated) of the fits file in the
       CaptureComplete row of the analyze log
     - fitsKeyword are the position/label of fits keyword
-    
+
 # Notes:
     - This script doesn't delete any file. It just update or overwrite fits keywords
     - Tested on Linux only.
     - .analyze default location on linux: ~/.local/share/kstars/analyze/
-    - Requires: Python3, Astropy, Kstars v.3.5.0+ 
+    - Requires: Python3, Astropy, Kstars v.3.5.0+
     - As soon as Ekos will write these keywords to a fits file, this
     script will be obsolete.
 """
 
 import sys
 import os
-import configparser
 import json
-
+import glob
 # Astropy package is needed
 try:
     from astropy.io import fits
@@ -46,7 +45,8 @@ try:
 except (json.decoder.JSONDecodeError, IOError):
     # Template config for first run only. Do not edit below.
     # If needed change the json config file.
-    fconfig['analyzeFile'] = "~/.local/share/kstars/analyze/"
+    fconfig['analyzeDir'] = "~/.local/share/kstars/analyze/"
+    fconfig['overrideFitsDir'] = ""
     # Position of fits filename in the .analyze row, hopefully never changes.
     fconfig['fitsFileIndex'] = "5"
     # Which fits header to import? key: position in .analyze file, val: label for fits header
@@ -61,12 +61,9 @@ except (json.decoder.JSONDecodeError, IOError):
     with open('fits_header_import_config.ini', 'r') as config:
         config = json.load(config)
 
-# Open fits file using full path or read from script current directory
-fullPath = True
 # Path separator. Not tested on Windows, try \\
 separator = "/"
-# Row counter
-counter = 0
+
 # END CONFIGURATION
 
 # Class for message colors
@@ -82,73 +79,126 @@ class bc:
     BOLD = '\033[1m'
 
 
-# Input .analyze file
-analyzeFile = input(
-    "Enter full path to .analyze file  (default: " + config['analyzeFile'] + "):")
-if len(analyzeFile) == 0:
-    analyzeFile = config['analyzeFile']
+def listFits(config, lines, separator, mode):
+    fitsFileIndex = int(config['fitsFileIndex'])
 
-try:
-    with open(os.path.join(analyzeFile), "r") as file:
-        lines = file.readlines()
-    print(bc.OKBLUE+"File found"+bc.ENDC)
-except EnvironmentError:
-    print(bc.FAIL + "Please enter a valid path to a .analyze file"+bc.ENDC)
+    # Row counter
+    counter = 0
+    # Parsing .analyze file
+    for row, val in enumerate(lines):
+
+        # We just need the captureComplete rows
+        # that store relevant information
+        if "CaptureComplete" in val:
+            line = val.split(",")
+            if config['overrideFitsDir'] == "":
+                fitsFile = line[fitsFileIndex]
+            else:
+                fitsFile = os.path.join(
+                    config['overrideFitsDir'], line[fitsFileIndex].split(separator)[-1])
+            print(fitsFile)
+            # and there must be a fits filename in that row
+            if fitsFile != "":
+                try:
+                    counter += 1
+                    keyCounter = 0
+                    print(str(counter) + " - file: " + fitsFile)
+                    for key in config['fitsKeyword']:
+                        try:
+                            val = float(line[int(key)])
+                            keyCounter += 1
+
+                            if mode == 'write':
+                                # Writing the keywords into FITS headers
+                                fits.setval(
+                                    fitsFile,
+                                    config['fitsKeyword'][key],
+                                    value=val)
+
+                            print(str(config['fitsKeyword']
+                                      [key]) + " = "+str(val))
+                        except IndexError:
+                            print(bc.WARNING+"Index "+str(key) +
+                                  " is not listed in .analyze file" + bc.ENDC)
+
+                    if mode == 'write':
+                        print(bc.OKGREEN+str(keyCounter) +
+                              " FITS keywords updated"+bc.ENDC)
+
+                except FileNotFoundError:
+                    print(bc.FAIL+"File not found"+bc.ENDC)
+                    pass
+                print("")
+    return counter
+
+
+# MAIN
+# Input .analyze directory
+analyzeDir = input(
+    "Enter full path to .analyze dir  (default: " + config['analyzeDir'] + "):")
+if len(analyzeDir) == 0:
+    analyzeDir = config['analyzeDir']
+
+# Read .analyze files from directory
+analyzeFiles = glob.glob(config['analyzeDir']+"/*.analyze")
+analyzeFiles.sort(key=os.path.getmtime, reverse=True)
+
+# Exit if there are no .analyze file
+if len(analyzeFiles) == 0:
+    print(bc.FAIL + "There are no .analyze files in this directory"+bc.ENDC)
     exit(0)
+else:
+    print(str(len(analyzeFiles))+" analyze files found")
+
+overrideFitsDir = input(
+    "If fits are moved from original location enter dir  (default: " + config['overrideFitsDir'] + "):")
+if len(overrideFitsDir) == 0:
+    overrideFitsDir = config['overrideFitsDir']
 
 # Update config
-config['analyzeFile'] = analyzeFile
+config['analyzeDir'] = analyzeDir
+config['overrideFitsDir'] = overrideFitsDir
 with open('fits_header_import_config.ini', 'w') as f:
     json.dump(config, f)
 
-# Ask for confirmation
-v = str(list(config['fitsKeyword'].values()))
-confirm = input(bc.BOLD +
-                "Press any key to write " + v + " into the fits header [q=quit] " + bc.ENDC)
-# Exit script
-if confirm in ['exit', 'quit', 'q']:
-    exit(0)
 
-fitsFileIndex = int(config['fitsFileIndex'])
+# iterate over all analyze file in the directory
+for analyzeFile in enumerate(analyzeFiles):
+    actionInput = input(bc.OKGREEN + str(analyzeFile[0]+1)+"/" + str(len(analyzeFiles)) +
+                        " Parsing file "+str(analyzeFile[1].split(separator)[-1]) +
+                        " [enter=list fits files|s=skip|q=quit]"+bc.ENDC)
 
-# Parsing .analyze file
-for row, val in enumerate(lines):
+    # Skip to next file
+    if actionInput == 's':
+        continue
 
-    # We just need the captureComplete rows
-    # that store relevant information
-    if "CaptureComplete" in val:
-        line = val.split(",")
-        if fullPath:
-            fitsFile = line[fitsFileIndex]
-        else:
-            fitsFile = line[config['fitsFileIndex']].split(separator)[-1]
+    # Exit script
+    elif actionInput in ['exit', 'quit', 'q']:
+        exit(0)
 
-        # and there must be a fits filename in that row
-        if fitsFile != "":
-            try:
-                counter += 1
-                keyCounter = 0
-                print(str(counter) + " - file: " + fitsFile)
-                for key in config['fitsKeyword']:
-                    try:
-                        val = float(line[int(key)])
-                        keyCounter += 1
+    # Open and read the analyze file
+    try:
+        with open(os.path.join(analyzeFile[1]), "r") as file:
+            lines = file.readlines()
+    except EnvironmentError:
+        print(bc.FAIL + "Please enter a valid path to a .analyze file"+bc.ENDC)
+        exit(0)
 
-                        # Writing the keywords into FITS headers
-                        fits.setval(
-                            fitsFile,
-                            config['fitsKeyword'][key],
-                            value=val)
+    # List the fits files
+    counter = listFits(config, lines, separator, mode='show')
 
-                        print(str(config['fitsKeyword'][key]) + " = "+str(val))
-                    except IndexError:
-                        print(bc.WARNING+"Index "+str(key) +
-                              " is not listed in .analyze file" + bc.ENDC)
+    if counter > 0:
+        # Ask for action
+        v = str(list(config['fitsKeyword'].values()))
+        confirm = input(bc.BOLD +
+                        "Press any key to write " + v + " into the fits header [s=skip]q=quit] " + bc.ENDC)
+        # Exit script
+        if confirm in ['exit', 'quit', 'q']:
+            exit(0)
 
-                print(bc.OKGREEN+str(keyCounter) +
-                      " FITS keywords updated"+bc.ENDC)
-
-            except FileNotFoundError:
-                print(bc.FAIL+"File not found"+bc.ENDC)
-                pass
-            print("")
+        # if not Skiping move to next file
+        if confirm == 's':
+            continue
+    else:
+        print("No fits file found")
+    listFits(config, lines, separator,  mode='write')
