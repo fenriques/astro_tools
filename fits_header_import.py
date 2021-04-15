@@ -1,20 +1,26 @@
 """ README:
     This script reads parameters from Ekos Analyze log file (.analyze)
-    and writes them as keywords to matching fits files header section.
+    and writes them as keywords into fits files header section.
+
     As of now can be imported: HFR, Eccentricity, Stars, Median (background)
-
-    Operation:
+    
+# Operation:
     After an imaging session and before moving any fits file,
-    launch the script specifying the .analyze file path:
-    python fits_header_import.py
-    or with arg:
-    python fits_header_import.py <full_path_to_analyze_session_file>.analyze
+    launch the script: 
+        - python fits_header_import.py 
+        - Enter the .analyze file location
 
-    Notes:
+# Configuration:
+    After a first run and only if needed edit the fits_header_import_config.ini
+    - fitsFileIndex is the position (comma separated) of the fits file in the
+      CaptureComplete row of the analyze log
+    - fitsKeyword are the position/label of fits keyword
+    
+# Notes:
+    - This script doesn't delete any file. It just update or overwrite fits keywords
     - Tested on Linux only.
-    - This script needs configuration (read below).
-    - .analyze default location: ~/.local/share/kstars/analyze/
-    - Requires: Python3, Astropy, Kstars v.3.5.0+
+    - .analyze default location on linux: ~/.local/share/kstars/analyze/
+    - Requires: Python3, Astropy, Kstars v.3.5.0+ 
     - As soon as Ekos will write these keywords to a fits file, this
     script will be obsolete.
 """
@@ -38,8 +44,9 @@ try:
     with open('fits_header_import_config.ini', 'r') as config:
         config = json.load(config)
 except (json.decoder.JSONDecodeError, IOError):
+    # Template config for first run only. Do not edit below.
+    # If needed change the json config file.
     fconfig['analyzeFile'] = "~/.local/share/kstars/analyze/"
-    # /home/ferrante/Downloads/analyze/ekos-2021-04-01T21-04-31.analyze
     # Position of fits filename in the .analyze row, hopefully never changes.
     fconfig['fitsFileIndex'] = "5"
     # Which fits header to import? key: position in .analyze file, val: label for fits header
@@ -60,8 +67,9 @@ fullPath = True
 separator = "/"
 # Row counter
 counter = 0
+# END CONFIGURATION
 
-# Class for messages color
+# Class for message colors
 
 
 class bc:
@@ -74,8 +82,7 @@ class bc:
     BOLD = '\033[1m'
 
 
-# Open .analyze file
-# Input
+# Input .analyze file
 analyzeFile = input(
     "Enter full path to .analyze file  (default: " + config['analyzeFile'] + "):")
 if len(analyzeFile) == 0:
@@ -84,7 +91,7 @@ if len(analyzeFile) == 0:
 try:
     with open(os.path.join(analyzeFile), "r") as file:
         lines = file.readlines()
-
+    print(bc.OKBLUE+"File found"+bc.ENDC)
 except EnvironmentError:
     print(bc.FAIL + "Please enter a valid path to a .analyze file"+bc.ENDC)
     exit(0)
@@ -94,26 +101,34 @@ config['analyzeFile'] = analyzeFile
 with open('fits_header_import_config.ini', 'w') as f:
     json.dump(config, f)
 
+# Ask for confirmation
+v = str(list(config['fitsKeyword'].values()))
+confirm = input(bc.BOLD +
+                "Press any key to write " + v + " into the fits header [q=quit] " + bc.ENDC)
+# Exit script
+if confirm in ['exit', 'quit', 'q']:
+    exit(0)
+
 fitsFileIndex = int(config['fitsFileIndex'])
 
 # Parsing .analyze file
 for row, val in enumerate(lines):
 
     # We just need the captureComplete rows
+    # that store relevant information
     if "CaptureComplete" in val:
         line = val.split(",")
         if fullPath:
             fitsFile = line[fitsFileIndex]
         else:
-            fitsFile = line[config
-                            ['fitsFileIndex']].split(separator)[-1]
+            fitsFile = line[config['fitsFileIndex']].split(separator)[-1]
 
         # and there must be a fits filename in that row
         if fitsFile != "":
             try:
                 counter += 1
                 keyCounter = 0
-                print(bc.OKBLUE+str(counter) + " - file: " + fitsFile+bc.ENDC)
+                print(str(counter) + " - file: " + fitsFile)
                 for key in config['fitsKeyword']:
                     try:
                         val = float(line[int(key)])

@@ -10,7 +10,7 @@
 import sys
 import os
 import ast
-import configparser
+import json
 
 try:
     from astropy.io import fits
@@ -20,19 +20,20 @@ except:
 
 # CONFIGURATION:
 # Read / create config file
-config = configparser.ConfigParser()
+fconfig = {}
 try:
-    with open('config.ini') as f:
-        config.read('config.ini')
+    with open('fits_manager_config.ini', 'r') as config:
+        config = json.load(config)
+except (json.decoder.JSONDecodeError, IOError):
+    fconfig['sourceDirName'] = "."
+    fconfig['destinationDirName'] = "."
+    fconfig['fitsExpression'] = ""
 
-except IOError:
-    config.add_section('default')
-    config['default']['sourceDirName'] = "."
-    config['default']['destinationDirName'] = "."
-    config['default']['fitsExpression'] = ""
-    with open('config.ini', 'w') as f:
-        config.write(f)
-    config.read('config.ini')
+    with open('fits_manager_config.ini', "w") as f:
+        json.dump(fconfig, f)
+    with open('fits_manager_config.ini', 'r') as config:
+        config = json.load(config)
+
 
 # File extension (fit|fits)
 extension = "fits"
@@ -55,9 +56,9 @@ class bc:
 
 # Input source directory for fits files
 sourceDirName = input(
-    "Enter full path to source fits files and press enter (default: " + config['default']['sourceDirName'] + "):")
+    "Enter full path to source fits files and press enter (default: " + config['sourceDirName'] + "):")
 if len(sourceDirName) == 0:
-    sourceDirName = config['default']['sourceDirName']
+    sourceDirName = config['sourceDirName']
 
 # Get the files from specified directory
 relPath = os.path.abspath(os.path.dirname(__file__))
@@ -78,9 +79,9 @@ else:
 
 # Input destination directory
 destinationDirName = input(
-    "Enter full path to destination directory (default: " + config['default']['destinationDirName']+"):")
+    "Enter full path to destination directory (default: " + config['destinationDirName']+"):")
 if len(destinationDirName) == 0:
-    destinationDirName = config['default']['destinationDirName']
+    destinationDirName = config['destinationDirName']
 
 # Check if directory exists
 if not os.path.exists(destinationDirName):
@@ -93,9 +94,9 @@ print(bc.OKBLUE + "Destination directory set to " +
 
 # Fits keyowrd condition.
 fitsExpression = input(
-    "Enter an expression (default: " + config['default']['fitsExpression']+"):")
+    "Enter an expression (default: " + config['fitsExpression']+"):")
 if len(fitsExpression) == 0:
-    fitsExpression = config['default']['fitsExpression']
+    fitsExpression = config['fitsExpression']
 
 # Extract fits keywords from expression
 try:
@@ -107,16 +108,15 @@ except SyntaxError:
     print(bc.FAIL+"Expression contains errors: " +
           str(fitsExpression)+" "+bc.ENDC)
     exit(1)
-
 # Remove duplicate keywords
 varExpression = list(set(varExpression))
 
 # Update config
-config['default']['sourceDirName'] = sourceDirName
-config['default']['destinationDirName'] = destinationDirName
-config['default']['fitsExpression'] = fitsExpression
-with open('config.ini', 'w') as f:
-    config.write(f)
+config['sourceDirName'] = sourceDirName
+config['destinationDirName'] = destinationDirName
+config['fitsExpression'] = fitsExpression
+with open('fits_manager_config.ini', 'w') as f:
+    json.dump(config, f)
 
 # Help commands
 print("Commands:")
@@ -143,6 +143,7 @@ for rowCounter, fitsFile in enumerate(files):
         # Create global variables corrisponding to fits keywords
         # (not smart but effective)
         for fk in enumerate(varExpression):
+            print(str(fk))
             try:
                 globals()[fk[1]] = header[fk[1]]
                 print(str(fk[1])+" = "+str(header[fk[1]]))
