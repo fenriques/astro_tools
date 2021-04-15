@@ -37,23 +37,24 @@ A collection of tools for astronomy software
     and writes them as keywords into fits files header section.
 
     As of now can be imported: HFR, Eccentricity, Stars, Median (background)
-    
+
 # Operation:
-    After an imaging session and before moving any fits file,
-    launch the script: 
-        - python fits_header_import.py 
+    After an imaging session launch the script:
+        - python fits_header_import.py
         - Enter the .analyze file location
+        - Enter the directory where the fits files are located.
 
 # Configuration:
-    After a first run and only if needed edit the fits_header_import_config.ini
+    If the format of your .analyze log differs, try to fix fits_header_import_config.ini
     - fitsFileIndex is the position (comma separated) of the fits file in the
       CaptureComplete row of the analyze log
     - fitsKeyword are the position/label of fits keyword
-    
+    In any case open a ticket on github.
+
 # Notes:
     - This script doesn't delete any file. It just update or overwrite fits keywords
     - Tested on Linux only.
     - .analyze default location on linux: ~/.local/share/kstars/analyze/
-    - Requires: Python3, Astropy, Kstars v.3.5.0+ 
+    - Requires: Python3, Astropy, Kstars v.3.5.0+
     - As soon as Ekos will write these keywords to a fits file, this
     script will be obsolete.

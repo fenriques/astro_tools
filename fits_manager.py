@@ -11,12 +11,17 @@ import sys
 import os
 import ast
 import json
+import readline
 
 try:
     from astropy.io import fits
 except:
     print("Astropy lib needed, try: pip install astropy")
     exit(1)
+
+
+readline.set_completer_delims(' \t\n=')
+readline.parse_and_bind("tab: complete")
 
 # CONFIGURATION:
 # Read / create config file

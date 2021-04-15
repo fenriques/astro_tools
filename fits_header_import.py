@@ -5,16 +5,17 @@
     As of now can be imported: HFR, Eccentricity, Stars, Median (background)
 
 # Operation:
-    After an imaging session and before moving any fits file,
-    launch the script:
+    After an imaging session launch the script:
         - python fits_header_import.py
         - Enter the .analyze file location
+        - Enter the directory where the fits files are located.
 
 # Configuration:
-    After a first run and only if needed edit the fits_header_import_config.ini
+    If the format of your .analyze log differs, try to fix fits_header_import_config.ini
     - fitsFileIndex is the position (comma separated) of the fits file in the
       CaptureComplete row of the analyze log
     - fitsKeyword are the position/label of fits keyword
+    In any case open a ticket on github.
 
 # Notes:
     - This script doesn't delete any file. It just update or overwrite fits keywords
@@ -29,12 +30,18 @@ import sys
 import os
 import json
 import glob
+import readline
+
 # Astropy package is needed
 try:
     from astropy.io import fits
 except:
     print("Astropy lib needed, try: pip install astropy")
     exit(0)
+
+
+readline.set_completer_delims(' \t\n=')
+readline.parse_and_bind("tab: complete")
 
 # CONFIGURATION:
 # Read / create config file
@@ -46,7 +53,6 @@ except (json.decoder.JSONDecodeError, IOError):
     # Template config for first run only. Do not edit below.
     # If needed change the json config file.
     fconfig['analyzeDir'] = "~/.local/share/kstars/analyze/"
-    fconfig['overrideFitsDir'] = ""
     # Position of fits filename in the .analyze row, hopefully never changes.
     fconfig['fitsFileIndex'] = "5"
     # Which fits header to import? key: position in .analyze file, val: label for fits header
@@ -79,7 +85,7 @@ class bc:
     BOLD = '\033[1m'
 
 
-def listFits(config, lines, separator, mode):
+def listFits(config, lines, separator, overrideFitsDir, mode):
     fitsFileIndex = int(config['fitsFileIndex'])
 
     # Row counter
@@ -91,14 +97,13 @@ def listFits(config, lines, separator, mode):
         # that store relevant information
         if "CaptureComplete" in val:
             line = val.split(",")
-            if config['overrideFitsDir'] == "":
-                fitsFile = line[fitsFileIndex]
-            else:
-                fitsFile = os.path.join(
-                    config['overrideFitsDir'], line[fitsFileIndex].split(separator)[-1])
-            print(fitsFile)
+            fitsFile = line[fitsFileIndex]
+
             # and there must be a fits filename in that row
             if fitsFile != "":
+                if overrideFitsDir != "":
+                    fitsFile = os.path.join(
+                        overrideFitsDir, fitsFile.split(separator)[-1])
                 try:
                     counter += 1
                     keyCounter = 0
@@ -135,12 +140,12 @@ def listFits(config, lines, separator, mode):
 # MAIN
 # Input .analyze directory
 analyzeDir = input(
-    "Enter full path to .analyze dir  (default: " + config['analyzeDir'] + "):")
+    "Enter full path to .analyze log files directory (default: " + config['analyzeDir'] + "):")
 if len(analyzeDir) == 0:
     analyzeDir = config['analyzeDir']
 
 # Read .analyze files from directory
-analyzeFiles = glob.glob(config['analyzeDir']+"/*.analyze")
+analyzeFiles = glob.glob(analyzeDir+"/*.analyze")
 analyzeFiles.sort(key=os.path.getmtime, reverse=True)
 
 # Exit if there are no .analyze file
@@ -148,16 +153,17 @@ if len(analyzeFiles) == 0:
     print(bc.FAIL + "There are no .analyze files in this directory"+bc.ENDC)
     exit(0)
 else:
-    print(str(len(analyzeFiles))+" analyze files found")
+    print(bc.OKGREEN+str(len(analyzeFiles)) +
+          " analyze log files found\n"+bc.ENDC)
 
+# Fits file could have been move to another location, the log will not find
+# these files unless we set the new location.
 overrideFitsDir = input(
-    "If fits are moved from original location enter dir  (default: " + config['overrideFitsDir'] + "):")
-if len(overrideFitsDir) == 0:
-    overrideFitsDir = config['overrideFitsDir']
+    "If you moved fits files from their original location, enter the new path.\n" +
+    "Else leaving blank will read the original location from .analyze log file:")
 
 # Update config
 config['analyzeDir'] = analyzeDir
-config['overrideFitsDir'] = overrideFitsDir
 with open('fits_header_import_config.ini', 'w') as f:
     json.dump(config, f)
 
@@ -185,13 +191,14 @@ for analyzeFile in enumerate(analyzeFiles):
         exit(0)
 
     # List the fits files
-    counter = listFits(config, lines, separator, mode='show')
+    counter = listFits(config, lines, separator, overrideFitsDir, mode='show')
 
     if counter > 0:
         # Ask for action
         v = str(list(config['fitsKeyword'].values()))
         confirm = input(bc.BOLD +
-                        "Press any key to write " + v + " into the fits header [s=skip]q=quit] " + bc.ENDC)
+                        "Press any key to write " + v +
+                        " into the fits header [enter=write|s=skip]q=quit] " + bc.ENDC)
         # Exit script
         if confirm in ['exit', 'quit', 'q']:
             exit(0)
@@ -201,4 +208,4 @@ for analyzeFile in enumerate(analyzeFiles):
             continue
     else:
         print("No fits file found")
-    listFits(config, lines, separator,  mode='write')
+    listFits(config, lines, separator, overrideFitsDir, mode='write')
