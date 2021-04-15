@@ -58,3 +58,5 @@ A collection of tools for astronomy software
     - Requires: Python3, Astropy, Kstars v.3.5.0+
     - As soon as Ekos will write these keywords to a fits file, this
     script will be obsolete.
+
+![image 2](/documentation/fitsimport.png?raw=true)
