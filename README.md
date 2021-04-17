@@ -11,7 +11,11 @@ A collection of tools for astronomy software
     This script allows the user to set any custom condition on all fits keyword.
     
     For example:
-    - ECC > 0.6 will move/delete files with Eccentricity too high
+    - When observing from a remote location, files need to be downloaded locally.
+    Discarding all bad frames saves download time.  
+    - Lucky imaging requires a lot of disk space, removing worst frames could help
+    reducing disk occupation.
+    - ECC > 0.6 and HFR > 2.8 will move/delete worst frame.
     - GAIN == 200 and FILTER == 'H_Alpha' will move files having these Gain 
     and Filter values to another dir
     - TEMP > 0 and TEMP <10 will move matching files to corresponding 
