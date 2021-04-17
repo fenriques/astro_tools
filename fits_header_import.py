@@ -149,8 +149,7 @@ def listFits(config, lines, separator, overrideFitsDir, analyzeFile, mode):
 
                         if mode == 'write':
                             print("File found in: " + fitsFileNew)
-                            print(bc.OKGREEN+str(keyCounter) +
-                                  " Fits keywords updated"+bc.ENDC)
+                            print(bc.OKGREEN + " Fits keywords updated"+bc.ENDC)
 
                     except FileNotFoundError:
                         print(bc.FAIL+"File not found"+bc.ENDC)
