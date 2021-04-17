@@ -53,6 +53,7 @@ except (json.decoder.JSONDecodeError, IOError):
     # Template config for first run only. Do not edit below.
     # If needed change the json config file.
     fconfig['analyzeDir'] = "~/.local/share/kstars/analyze/"
+    fconfig['overrideFitsDir'] = ""
     # Position of fits filename in the .analyze row, hopefully never changes.
     fconfig['fitsFileIndex'] = "5"
     # Which fits header to import? key: position in .analyze file, val: label for fits header
@@ -85,7 +86,7 @@ class bc:
     BOLD = '\033[1m'
 
 
-def listFits(config, lines, separator, overrideFitsDir, mode):
+def listFits(config, lines, separator, overrideFitsDir, analyzeFile, mode):
     fitsFileIndex = int(config['fitsFileIndex'])
 
     # Row counter
@@ -101,39 +102,60 @@ def listFits(config, lines, separator, overrideFitsDir, mode):
 
             # and there must be a fits filename in that row
             if fitsFile != "":
+                # override replace the file original location
                 if overrideFitsDir != "":
-                    fitsFile = os.path.join(
+                    fitsFileNew = os.path.join(
                         overrideFitsDir, fitsFile.split(separator)[-1])
-                try:
-                    counter += 1
-                    keyCounter = 0
-                    print(str(counter) + " - file: " + fitsFile)
-                    for key in config['fitsKeyword']:
-                        try:
-                            val = float(line[int(key)])
-                            keyCounter += 1
+                else:
+                    fitsFileNew = fitsFile
 
-                            if mode == 'write':
+                if mode == "show" or os.path.isfile(fitsFileNew) == True:
+
+                    try:
+                        counter += 1
+                        keyCounter = 0
+                        print(bc.OKBLUE+str(counter) +
+                              " Data from log file: " + analyzeFile+bc.ENDC)
+                        print("Original fits file location: " + fitsFile)
+                        for key in config['fitsKeyword']:
+                            try:
+                                val = float(line[int(key)])
+                                keyCounter += 1
+
+                                print(str(config['fitsKeyword']
+                                          [key]) + " = "+str(val))
+
                                 # Writing the keywords into FITS headers
-                                fits.setval(
-                                    fitsFile,
-                                    config['fitsKeyword'][key],
-                                    value=val)
+                                if mode == 'write':
+                                    fits.setval(
+                                        fitsFileNew,
+                                        config['fitsKeyword'][key],
+                                        value=val)
+                            except IndexError:
+                                print(bc.WARNING+"Index "+str(key) +
+                                      " is not listed in .analyze file" + bc.ENDC)
 
-                            print(str(config['fitsKeyword']
-                                      [key]) + " = "+str(val))
-                        except IndexError:
-                            print(bc.WARNING+"Index "+str(key) +
-                                  " is not listed in .analyze file" + bc.ENDC)
+                        # Always good to check if file exists
+                        if mode == 'show':
+                            if os.path.isfile(fitsFileNew) == True:
+                                print("File found in: " + fitsFileNew)
+                                print(bc.OKGREEN +
+                                      "Keywords can be updated "+bc.ENDC)
+                            else:
+                                print(bc.FAIL+"File not found in: " +
+                                      fitsFileNew+bc.ENDC)
+                                print(
+                                    bc.FAIL+"Cannot update fits file headers"+bc.ENDC)
 
-                    if mode == 'write':
-                        print(bc.OKGREEN+str(keyCounter) +
-                              " FITS keywords updated"+bc.ENDC)
+                        if mode == 'write':
+                            print("File found in: " + fitsFileNew)
+                            print(bc.OKGREEN+str(keyCounter) +
+                                  " Fits keywords updated"+bc.ENDC)
 
-                except FileNotFoundError:
-                    print(bc.FAIL+"File not found"+bc.ENDC)
-                    pass
-                print("")
+                    except FileNotFoundError:
+                        print(bc.FAIL+"File not found"+bc.ENDC)
+                        pass
+                    print("")
     return counter
 
 
@@ -160,10 +182,17 @@ else:
 # these files unless we set the new location.
 overrideFitsDir = input(
     "If you moved fits files from their original location, enter the new path.\n" +
-    "Else leaving blank will read the original location from .analyze log file:")
+    "Else leaving blank will read the original location from .analyze log file " +
+    "[e=empty|default: " + config['overrideFitsDir'] + "]:")
+
+if len(overrideFitsDir) == 0:
+    overrideFitsDir = config['overrideFitsDir']
+elif overrideFitsDir == "e":
+    overrideFitsDir = ""
 
 # Update config
 config['analyzeDir'] = analyzeDir
+config['overrideFitsDir'] = overrideFitsDir
 with open('fits_header_import_config.ini', 'w') as f:
     json.dump(config, f)
 
@@ -191,7 +220,8 @@ for analyzeFile in enumerate(analyzeFiles):
         exit(0)
 
     # List the fits files
-    counter = listFits(config, lines, separator, overrideFitsDir, mode='show')
+    counter = listFits(config, lines, separator, overrideFitsDir,
+                       analyzeFile[1].split(separator)[-1], mode='show')
 
     if counter > 0:
         # Ask for action
@@ -208,4 +238,5 @@ for analyzeFile in enumerate(analyzeFiles):
             continue
     else:
         print("No fits file found")
-    listFits(config, lines, separator, overrideFitsDir, mode='write')
+    listFits(config, lines, separator, overrideFitsDir,
+             analyzeFile[1].split(separator)[-1], mode='write')
