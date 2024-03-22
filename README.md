@@ -69,3 +69,15 @@ A collection of tools for astronomy software
     script will be obsolete.
 
 ![image 2](/documentation/fitsimport.png?raw=true)
+
+# 3) fits_list.py
+    This scripts recursively reads FIT file header and print to terminal.
+    You can customize which keyword is printed.
+
+# Using this script: 
+    - Install python. Any recent version works on Linux, Windows or MacOS
+    - Install astropy lib: pip install astropy
+    - The script can be placed anywhere on your file system (e.g. /home/scripts/fits_list.py)
+    - Open a terminal and move to your images directory: e.g. /home/astrophoto/NGC_1313
+    - Launch the script with its full path: python /home/scripts/fits_list.py
+    
