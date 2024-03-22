@@ -45,7 +45,6 @@ for root, dirs, files in os.walk(sourceDirName):
             continue
         
         try:
-            #print(fitsFile)
             hdul = fits.open(os.path.join(root, fitsFile))
             header = hdul[0].header
             keyword_list = []
