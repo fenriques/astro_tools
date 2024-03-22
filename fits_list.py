@@ -51,9 +51,6 @@ for root, dirs, files in os.walk(sourceDirName):
             keyword_list = []
             for fits_keyword in fits_keywords:
                 try:
-                    #print(Style.BRIGHT + Fore.YELLOW + str(objectN) + Style.RESET_ALL + " " + str(date_obs) + ", Exp: " + str(exptime)+ "sec " +  ", Filter: " + str(filter)+  ", RA: " + str(objectra)+  ", DEC: " + str(objectdec))
-
-                    #keyword_list.append(str(header[fits_keywords[fits_keyword]]))
                     print( str(fits_keyword) + ' ' + str(header[fits_keywords[fits_keyword]]) + ', ', end = "")
                 except KeyError:
                     pass
